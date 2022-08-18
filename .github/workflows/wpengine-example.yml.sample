@@ -1,0 +1,78 @@
+name: 📦 Deploy to WP Engine TEST
+on:
+   push:
+      branches:
+         - main
+         - dev
+         - feature/**
+   workflow_dispatch:
+
+jobs:
+   setup:
+      name: 🚩 Starting deployment
+      runs-on: ubuntu-latest
+      steps:
+         - name: Getting latest code
+           uses: actions/checkout@v2
+
+         - name: Setting up Node
+           uses: actions/setup-node@v2
+           with:
+              node-version: "16"
+
+         - name: Setting up PHP
+           uses: shivammathur/setup-php@v2
+           with:
+              php-version: "7.4"
+
+         - name: NPM Cache
+           uses: actions/cache@v2
+           with:
+              path: ~/.npm
+              key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+              restore-keys: |
+                 ${{ runner.os }}-node-
+
+         - name: Get Composer cache dir
+           id: composer-cache
+           run: |
+              echo "::set-output name=dir::$(composer config cache-files-dir)"
+
+         - name: Composer Cache
+           uses: actions/cache@v2
+           with:
+              path: ${{ steps.composer-cache.outputs.dir }}
+              key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+              restore-keys: |
+                 ${{ runner.os }}-composer-
+
+         - name: Installing dependencies
+           run: |
+              npm init -y
+              npm ci
+              # composer install -o
+
+         - name: Building theme
+           run: npm run build --if-present
+
+         - name: Starting deploy
+           uses: IlanVivanco/wpe-deployment-action@main
+           env:
+              # Keys, lint & url options
+              WPE_SSH_KEY: ${{ secrets.WPE_SSH_KEY }}
+              SOURCE_PATH: ""
+              PUBLISH_PATH: "wp-content/themes/my-theme"
+
+              # Branches & Environments
+              PRD_BRANCH: main
+              PRD_ENV: wpeinstall
+
+              # You set up the autodeployment to Staging and Dev environments as well.
+              # Push to branches "dev" and "feature/..."
+              DEV_BRANCH: "dev, feature(/.*)?"
+              DEV_ENV: wpeinstalldev
+
+              # Push to branch "stage"
+              # STG_BRANCH: stage
+              # STG_ENV: wpeinstallstage
+

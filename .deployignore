@@ -1,0 +1,7 @@
+composer*
+elementor-json
+node_modules
+package*
+phpcs*
+README*
+vendor
